@@ -1,0 +1,12 @@
+/Users/arslan/mega-poster/mega-gastro-poster-backend/src/main/java/com/megagastro/poster/MegaGastroPosterApplication.java
+/Users/arslan/mega-poster/mega-gastro-poster-backend/src/main/java/com/megagastro/poster/config/WebConfig.java
+/Users/arslan/mega-poster/mega-gastro-poster-backend/src/main/java/com/megagastro/poster/controller/PosterController.java
+/Users/arslan/mega-poster/mega-gastro-poster-backend/src/main/java/com/megagastro/poster/controller/ProductController.java
+/Users/arslan/mega-poster/mega-gastro-poster-backend/src/main/java/com/megagastro/poster/dto/CreateCustomProductRequest.java
+/Users/arslan/mega-poster/mega-gastro-poster-backend/src/main/java/com/megagastro/poster/dto/PosterRequest.java
+/Users/arslan/mega-poster/mega-gastro-poster-backend/src/main/java/com/megagastro/poster/model/Product.java
+/Users/arslan/mega-poster/mega-gastro-poster-backend/src/main/java/com/megagastro/poster/model/ProductSource.java
+/Users/arslan/mega-poster/mega-gastro-poster-backend/src/main/java/com/megagastro/poster/repository/CustomProductRepository.java
+/Users/arslan/mega-poster/mega-gastro-poster-backend/src/main/java/com/megagastro/poster/service/PosterService.java
+/Users/arslan/mega-poster/mega-gastro-poster-backend/src/main/java/com/megagastro/poster/service/ProductService.java
+/Users/arslan/mega-poster/mega-gastro-poster-backend/src/main/java/com/megagastro/poster/service/RemoteProductService.java

@@ -1,0 +1,13 @@
+com/megagastro/poster/MegaGastroPosterApplication.class
+com/megagastro/poster/dto/PosterRequest.class
+com/megagastro/poster/controller/ProductController.class
+com/megagastro/poster/model/ProductSource.class
+com/megagastro/poster/model/Product.class
+com/megagastro/poster/service/ProductService.class
+com/megagastro/poster/service/RemoteProductService.class
+com/megagastro/poster/dto/CreateCustomProductRequest.class
+com/megagastro/poster/config/WebConfig.class
+com/megagastro/poster/repository/CustomProductRepository.class
+com/megagastro/poster/service/RemoteProductService$RemoteProductDto.class
+com/megagastro/poster/controller/PosterController.class
+com/megagastro/poster/service/PosterService.class
