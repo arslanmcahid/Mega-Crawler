@@ -9,6 +9,7 @@ export interface Product {
   priceOriginal?: number | null;
   discountPct?: number | null;
   source: ProductSource;
+  category?: string | null;
 }
 
 

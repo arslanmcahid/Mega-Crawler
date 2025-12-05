@@ -37,17 +37,30 @@ public class RemoteProductService {
         return Arrays.stream(response)
                 .filter(Objects::nonNull)
                 .map(this::mapToProduct)
+                .collect(Collectors.toMap(
+                        Product::getId,
+                        p -> p,
+                        (existing, replacement) -> existing // Duplicate varsa ilkini tut
+                ))
+                .values()
+                .stream()
                 .collect(Collectors.toList());
     }
 
     private Product mapToProduct(RemoteProductDto dto) {
         Product p = new Product();
         String url = dto.url != null ? dto.url : "";
-        p.setId("remote-" + url.hashCode());
-        p.setName(dto.name);
+        String name = dto.name != null ? dto.name : "";
+        Double price = dto.price_current != null ? dto.price_current : 0.0;
+
+        // Daha unique ID oluştur: URL + name + price kombinasyonu
+        String uniqueKey = url + "|" + name + "|" + price;
+        p.setId("remote-" + uniqueKey.hashCode());
+
+        p.setName(name);
         p.setUrl(url);
         p.setImageUrl(dto.image_url);
-        p.setPriceCurrent(dto.price_current != null ? dto.price_current : 0.0);
+        p.setPriceCurrent(price);
         p.setPriceOriginal(dto.price_original != null ? dto.price_original : p.getPriceCurrent());
         p.setDiscountPct(dto.discount_pct != null ? dto.discount_pct : 0);
         p.setSource(ProductSource.REMOTE);
@@ -63,5 +76,3 @@ public class RemoteProductService {
         public Integer discount_pct;
     }
 }
-
-

@@ -42,6 +42,21 @@ public class ProductService {
     public Product saveCustom(Product p) {
         return customProductRepository.save(p);
     }
+
+    public List<Product> searchProducts(String query) {
+        if (query == null || query.trim().isEmpty() || query.trim().length() < 3) {
+            return List.of();
+        }
+        
+        String searchTerm = query.toLowerCase().trim();
+        List<Product> all = new ArrayList<>();
+        all.addAll(remoteProductService.fetchRemoteProducts());
+        all.addAll(customProductRepository.findAll());
+        
+        return all.stream()
+                .filter(p -> p.getName() != null && p.getName().toLowerCase().contains(searchTerm))
+                .toList();
+    }
 }
 
 

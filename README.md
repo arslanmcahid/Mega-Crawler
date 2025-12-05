@@ -125,7 +125,7 @@ Frontend `http://localhost:3000` adresinde çalışacaktır.
 ### 3. Poster Oluşturma
 
 - Sağ tarafta **"3. Poster Ayarları ve Seçili Ürünler"** bölümünde:
-  - **Poster Başlığı** alanına istediğiniz başlığı girin (varsayılan: "Haftanın Fırsatları")
+  - **Poster Başlığı** alanına istediğiniz başlığı girin (varsayılan: "Angebote der Woche")
   - Seçili ürünlerin listesini görebilirsiniz
   - **"Poster Oluştur (X ürün)"** butonuna tıklayın
   - PDF dosyası otomatik olarak indirilecektir (`poster.pdf`)

@@ -5,7 +5,6 @@ import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -20,13 +19,18 @@ public class PosterService {
     public String buildPosterHtml(String title, List<Product> products, int count) {
         String effectiveTitle = (title == null || title.isBlank()) ? "Haftanın Fırsatları" : title;
 
+        // Maksimum 9 ürün
+        int maxProducts = Math.min(count, 9);
+
         List<Product> selected = products.stream()
                 .filter(p -> p.getPriceCurrent() != null && p.getPriceCurrent() > 0)
                 .sorted(Comparator
                         .comparing(Product::getDiscountPct, Comparator.nullsLast(Comparator.reverseOrder()))
                         .thenComparing(Product::getPriceCurrent))
-                .limit(count)
+                .limit(maxProducts)
                 .collect(Collectors.toList());
+
+        int productCount = selected.size();
 
         NumberFormat nf = NumberFormat.getCurrencyInstance(Locale.GERMANY);
 
@@ -46,7 +50,8 @@ public class PosterService {
             cards.append("<div class=\"card\">")
                     .append(badge)
                     .append("<div class=\"image-wrapper\">")
-                    .append("<img src=\"").append(escapeHtml(imageUrl)).append("\" alt=\"").append(escapeHtml(p.getName())).append("\"/>")
+                    .append("<img src=\"").append(escapeHtml(imageUrl)).append("\" alt=\"")
+                    .append(escapeHtml(p.getName())).append("\"/>")
                     .append("</div>")
                     .append("<div class=\"name\">").append(escapeHtml(p.getName())).append("</div>")
                     .append("<div class=\"prices\">")
@@ -58,32 +63,54 @@ public class PosterService {
 
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
 
+        // Responsive grid için card genişliği hesapla
+        String cardWidth = calculateCardWidth(productCount);
+
         return "<!DOCTYPE html>" +
                 "<html lang=\"tr\">" +
                 "<head>" +
                 "<meta charset=\"UTF-8\"/>" +
                 "<style>" +
                 "@page { size: A4; margin: 18mm; }" +
-                "body { font-family: Arial, sans-serif; }" +
-                "h1 { text-align: center; margin-bottom: 16px; }" +
-                ".grid { display: flex; flex-wrap: wrap; gap: 8px; }" +
-                ".card { position: relative; width: 30%; border: 1px solid #ccc; padding: 8px; box-sizing: border-box; }" +
-                ".image-wrapper { height: 120px; text-align: center; }" +
-                ".image-wrapper img { max-height: 120px; max-width: 100%; object-fit: contain; }" +
-                ".name { font-size: 12px; margin-top: 4px; min-height: 32px; }" +
-                ".prices { margin-top: 4px; }" +
-                ".current { font-size: 16px; font-weight: bold; color: #c0392b; }" +
-                ".old { font-size: 12px; text-decoration: line-through; color: #7f8c8d; }" +
-                ".badge { position: absolute; top: 4px; left: 4px; background: #e74c3c; color: #fff; padding: 2px 6px; font-size: 10px; border-radius: 4px; }" +
-                ".footer { position: fixed; bottom: 10mm; left: 0; right: 0; text-align: center; font-size: 10px; color: #555; }" +
+                "body { font-family: Arial, sans-serif; margin: 0; padding: 0; }" +
+                "h1 { text-align: center; margin-bottom: 20px; font-size: 24px; }" +
+                ".grid { width: 100%; overflow: hidden; }" +
+                ".card { position: relative; width: " + cardWidth
+                + "; border: 1px solid #ddd; padding: 12px; border-radius: 4px; background: #fff; float: left; margin-right: 12px; margin-bottom: 12px; }"
+                +
+                ".image-wrapper { height: 140px; text-align: center; margin-bottom: 8px; line-height: 140px; }" +
+                ".image-wrapper img { max-height: 140px; max-width: 100%; vertical-align: middle; }" +
+                ".name { font-size: 13px; margin-top: 8px; min-height: 36px; line-height: 1.3; color: #333; }" +
+                ".prices { margin-top: 8px; }" +
+                ".current { font-size: 18px; font-weight: bold; color: #c0392b; }" +
+                ".old { font-size: 13px; text-decoration: line-through; color: #7f8c8d; margin-top: 2px; }" +
+                ".badge { position: absolute; top: 8px; left: 8px; background: #e74c3c; color: #fff; padding: 4px 8px; font-size: 11px; border-radius: 4px; font-weight: bold; }"
+                +
+                ".footer { position: fixed; bottom: 10mm; left: 0; right: 0; text-align: center; font-size: 10px; color: #555; }"
+                +
+                ".clearfix { clear: both; }" +
                 "</style>" +
                 "</head>" +
                 "<body>" +
                 "<h1>" + escapeHtml(effectiveTitle) + "</h1>" +
-                "<div class=\"grid\">" + cards + "</div>" +
+                "<div class=\"grid\">" + cards + "<div class=\"clearfix\"></div></div>" +
                 "<div class=\"footer\">Oluşturulma tarihi: " + today + "</div>" +
                 "</body>" +
                 "</html>";
+    }
+
+    private String calculateCardWidth(int productCount) {
+        // Responsive grid: ürün sayısına göre card genişliği (openhtmltopdf uyumlu)
+        if (productCount == 1) {
+            return "100%";
+        } else if (productCount == 2) {
+            return "48%";
+        } else if (productCount <= 4) {
+            return "48%";
+        } else {
+            // 5-9 ürün için 3 kolonlu grid
+            return "31%";
+        }
     }
 
     public byte[] renderPdf(String html) {
@@ -100,7 +127,8 @@ public class PosterService {
     }
 
     private String escapeHtml(String input) {
-        if (input == null) return "";
+        if (input == null)
+            return "";
         return input
                 .replace("&", "&amp;")
                 .replace("<", "&lt;")
@@ -108,5 +136,3 @@ public class PosterService {
                 .replace("\"", "&quot;");
     }
 }
-
-

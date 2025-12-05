@@ -34,7 +34,12 @@ public class PosterController {
                 .map(java.util.Optional::get)
                 .collect(Collectors.toList());
 
-        int count = request.getCount() != null ? request.getCount() : 9;
+        // Maksimum 9 ürün
+        int count = request.getCount() != null ? Math.min(request.getCount(), 9) : 9;
+        // Eğer productIds 9'dan fazlaysa, sadece ilk 9'unu al
+        if (selectedProducts.size() > 9) {
+            selectedProducts = selectedProducts.subList(0, 9);
+        }
         String title = request.getTitle() != null ? request.getTitle() : "Haftanın Fırsatları";
 
         String html = posterService.buildPosterHtml(title, selectedProducts, count);
@@ -46,5 +51,3 @@ public class PosterController {
                 .body(pdf);
     }
 }
-
-

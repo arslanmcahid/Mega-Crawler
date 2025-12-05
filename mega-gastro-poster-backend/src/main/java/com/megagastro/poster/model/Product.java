@@ -10,6 +10,7 @@ public class Product {
     private Double priceOriginal;
     private Integer discountPct;
     private ProductSource source;
+    private String category;
 
     public String getId() {
         return id;
@@ -74,6 +75,12 @@ public class Product {
     public void setSource(ProductSource source) {
         this.source = source;
     }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
 }
-
-

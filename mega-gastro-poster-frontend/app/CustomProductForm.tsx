@@ -17,9 +17,8 @@ async function createByUrl(_key: string, { arg }: { arg: any }) {
 }
 
 async function createByFile(_key: string, { arg }: { arg: FormData }) {
-  const res = await api.post<Product>('/api/products/upload', arg, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
+  // FormData gönderirken Content-Type header'ını axios'a bırak (boundary otomatik eklenir)
+  const res = await api.post<Product>('/api/products/upload', arg);
   return res.data;
 }
 

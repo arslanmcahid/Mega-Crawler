@@ -5,13 +5,17 @@ import com.megagastro.poster.model.Product;
 import com.megagastro.poster.model.ProductSource;
 import com.megagastro.poster.service.ProductService;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 
 @RestController
@@ -23,6 +27,11 @@ public class ProductController {
 
     public ProductController(ProductService productService) {
         this.productService = productService;
+    }
+
+    @GetMapping("/search")
+    public List<Product> search(@RequestParam("q") String query) {
+        return productService.searchProducts(query);
     }
 
     @GetMapping
@@ -46,23 +55,34 @@ public class ProductController {
                 .body(saved);
     }
 
-    @PostMapping("/upload")
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Product> uploadCustom(
-            @RequestPart("name") String name,
-            @RequestPart("priceCurrent") Double priceCurrent,
-            @RequestPart(value = "priceOriginal", required = false) Double priceOriginal,
-            @RequestPart(value = "discountPct", required = false) Integer discountPct,
-            @RequestPart("file") MultipartFile file
-    ) throws IOException {
-        String uploadsDir = "uploads";
-        File dir = new File(uploadsDir);
-        if (!dir.exists() && !dir.mkdirs()) {
-            throw new IOException("Failed to create uploads directory");
+            @RequestParam("name") String name,
+            @RequestParam("priceCurrent") Double priceCurrent,
+            @RequestParam(value = "priceOriginal", required = false) Double priceOriginal,
+            @RequestParam(value = "discountPct", required = false) Integer discountPct,
+            @RequestParam("file") MultipartFile file) throws IOException {
+        // Proje root dizininde uploads klasörü oluştur
+        String userDir = System.getProperty("user.dir");
+        Path uploadsPath = Paths.get(userDir, "uploads");
+
+        // Klasör yoksa oluştur
+        if (!Files.exists(uploadsPath)) {
+            Files.createDirectories(uploadsPath);
         }
 
-        String filename = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-        File dest = new File(dir, filename);
-        file.transferTo(dest);
+        // Güvenli dosya adı oluştur
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isEmpty()) {
+            originalFilename = "image";
+        }
+        // Dosya adındaki özel karakterleri temizle
+        String safeFilename = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+        String filename = System.currentTimeMillis() + "_" + safeFilename;
+
+        // Dosyayı kaydet
+        Path destPath = uploadsPath.resolve(filename);
+        Files.copy(file.getInputStream(), destPath, StandardCopyOption.REPLACE_EXISTING);
 
         String imageUrl = "/uploads/" + filename;
 
@@ -80,5 +100,3 @@ public class ProductController {
                 .body(saved);
     }
 }
-
-
