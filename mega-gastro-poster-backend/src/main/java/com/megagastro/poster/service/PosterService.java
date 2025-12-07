@@ -8,9 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,7 +20,8 @@ public class PosterService {
         // Maksimum 9 ürün
         int maxProducts = Math.min(count, 9);
 
-        List<Product> selected = products.stream()
+        // Filtrele ve sırala
+        List<Product> filtered = products.stream()
                 .filter(p -> p.getPriceCurrent() != null && p.getPriceCurrent() > 0)
                 .sorted(Comparator
                         .comparing(Product::getDiscountPct, Comparator.nullsLast(Comparator.reverseOrder()))
@@ -30,35 +29,64 @@ public class PosterService {
                 .limit(maxProducts)
                 .collect(Collectors.toList());
 
-        int productCount = selected.size();
+        // Kategoriye göre gruplandır
+        Map<String, List<Product>> productsByCategory = filtered.stream()
+                .collect(Collectors.groupingBy(
+                        p -> {
+                            String cat = p.getCategory();
+                            return (cat == null || cat.isBlank()) ? "Diğer" : cat;
+                        },
+                        LinkedHashMap::new, // Sıralamayı koru
+                        Collectors.toList()
+                ));
 
+        // Kategorileri sırala (alfabetik)
+        List<String> sortedCategories = new ArrayList<>(productsByCategory.keySet());
+        Collections.sort(sortedCategories);
+
+        int productCount = filtered.size();
         NumberFormat nf = NumberFormat.getCurrencyInstance(Locale.GERMANY);
 
         StringBuilder cards = new StringBuilder();
-        for (Product p : selected) {
-            String badge = "";
-            if (p.getDiscountPct() != null && p.getDiscountPct() > 0) {
-                badge = "<div class=\"badge\">-" + p.getDiscountPct() + "%</div>";
+        
+        // Her kategori için ürünleri yan yana diz
+        for (String category : sortedCategories) {
+            List<Product> categoryProducts = productsByCategory.get(category);
+            
+            // Kategori başlığı (opsiyonel, sadece birden fazla kategori varsa göster)
+            if (sortedCategories.size() > 1) {
+                cards.append("<div class=\"category-header\">").append(escapeHtml(category)).append("</div>");
             }
-            String oldPriceHtml = "";
-            if (p.getPriceOriginal() != null &&
-                    !p.getPriceOriginal().equals(p.getPriceCurrent())) {
-                oldPriceHtml = "<div class=\"old\">" + nf.format(p.getPriceOriginal()) + "</div>";
-            }
-            String imageUrl = p.getImageUrl() != null ? p.getImageUrl() : "";
+            
+            // Bu kategorideki ürünleri yan yana diz
+            for (Product p : categoryProducts) {
+                String badge = "";
+                if (p.getDiscountPct() != null && p.getDiscountPct() > 0) {
+                    badge = "<div class=\"badge\">-" + p.getDiscountPct() + "%</div>";
+                }
+                String oldPriceHtml = "";
+                if (p.getPriceOriginal() != null &&
+                        !p.getPriceOriginal().equals(p.getPriceCurrent())) {
+                    oldPriceHtml = "<div class=\"old\">" + nf.format(p.getPriceOriginal()) + "</div>";
+                }
+                String imageUrl = p.getImageUrl() != null ? p.getImageUrl() : "";
 
-            cards.append("<div class=\"card\">")
-                    .append(badge)
-                    .append("<div class=\"image-wrapper\">")
-                    .append("<img src=\"").append(escapeHtml(imageUrl)).append("\" alt=\"")
-                    .append(escapeHtml(p.getName())).append("\"/>")
-                    .append("</div>")
-                    .append("<div class=\"name\">").append(escapeHtml(p.getName())).append("</div>")
-                    .append("<div class=\"prices\">")
-                    .append("<div class=\"current\">").append(nf.format(p.getPriceCurrent())).append("</div>")
-                    .append(oldPriceHtml)
-                    .append("</div>")
-                    .append("</div>");
+                cards.append("<div class=\"card\">")
+                        .append(badge)
+                        .append("<div class=\"image-wrapper\">")
+                        .append("<img src=\"").append(escapeHtml(imageUrl)).append("\" alt=\"")
+                        .append(escapeHtml(p.getName())).append("\"/>")
+                        .append("</div>")
+                        .append("<div class=\"name\">").append(escapeHtml(p.getName())).append("</div>")
+                        .append("<div class=\"prices\">")
+                        .append("<div class=\"current\">").append(nf.format(p.getPriceCurrent())).append("</div>")
+                        .append(oldPriceHtml)
+                        .append("</div>")
+                        .append("</div>");
+            }
+            
+            // Kategori sonrası temizlik (clearfix)
+            cards.append("<div class=\"clearfix\"></div>");
         }
 
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
@@ -75,6 +103,7 @@ public class PosterService {
                 "body { font-family: Arial, sans-serif; margin: 0; padding: 0; }" +
                 "h1 { text-align: center; margin-bottom: 20px; font-size: 24px; }" +
                 ".grid { width: 100%; overflow: hidden; }" +
+                ".category-header { width: 100%; font-size: 16px; font-weight: bold; color: #2c3e50; margin-top: 16px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 2px solid #3498db; clear: both; }" +
                 ".card { position: relative; width: " + cardWidth
                 + "; border: 1px solid #ddd; padding: 12px; border-radius: 4px; background: #fff; float: left; margin-right: 12px; margin-bottom: 12px; }"
                 +

@@ -68,9 +68,19 @@ app.get('/products', async (req, res) => {
     const page = await browser.newPage();
 
     const all = [];
+    const categoryMap = {
+      '/produkt-kategorie/gastro-kuechengeraete/': 'Gastro Küchengeräte',
+      '/produkt-kategorie/sale/': 'Sale',
+    };
+
     for (const path of categoryPaths) {
       try {
         const items = await scrapeCategory(page, `${BASE}${path}`);
+        const categoryName = categoryMap[path] || 'Diğer';
+        // Her ürüne kategori bilgisini ekle
+        items.forEach(item => {
+          item.category = categoryName;
+        });
         all.push(...items);
       } catch (e) {
         console.error('Error scraping category', path, e);
@@ -94,6 +104,7 @@ app.get('/products', async (req, res) => {
         price_current: current ?? 0,
         price_original: original ?? current ?? 0,
         discount_pct: discountPct ?? 0,
+        category: p.category || 'Diğer',
       };
     });
 

@@ -64,6 +64,7 @@ public class RemoteProductService {
         p.setPriceOriginal(dto.price_original != null ? dto.price_original : p.getPriceCurrent());
         p.setDiscountPct(dto.discount_pct != null ? dto.discount_pct : 0);
         p.setSource(ProductSource.REMOTE);
+        p.setCategory(dto.category != null ? dto.category : "Diğer");
         return p;
     }
 
@@ -74,5 +75,6 @@ public class RemoteProductService {
         public Double price_current;
         public Double price_original;
         public Integer discount_pct;
+        public String category;
     }
 }
