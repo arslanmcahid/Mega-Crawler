@@ -1,6 +1,8 @@
 package com.megagastro.poster.service;
 
+import com.megagastro.poster.dto.CreateCustomProductRequest;
 import com.megagastro.poster.model.Product;
+import com.megagastro.poster.model.ProductSource;
 import com.megagastro.poster.repository.CustomProductRepository;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +28,17 @@ public class ProductService {
         all.addAll(customProductRepository.findAll());
         return all;
     }
+     public Product createCustomProduct(CreateCustomProductRequest request) {
+        Product p = Product.builder().
+                name(request.getName())
+                .priceCurrent(request.getPriceCurrent())
+                .priceOriginal(request.getPriceOriginal() != null ? request.getPriceOriginal() : request.getPriceCurrent())
+                .discountPct(request.getDiscountPct())
+                .imageUrl(request.getImageUrl())
+                .source(ProductSource.CUSTOM)
+                .category(request.getCategory() != null ? request.getCategory() : "Custom").build();
+        return (customProductRepository.save(p));
+     }
 
     public Optional<Product> findById(String id) {
         if (id == null) {

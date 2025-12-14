@@ -5,6 +5,8 @@ crawler:
   base-url: http://localhost:4000
 
 spring:
+  cache:
+    type: caffeine
   servlet:
     multipart:
       max-file-size: 10MB

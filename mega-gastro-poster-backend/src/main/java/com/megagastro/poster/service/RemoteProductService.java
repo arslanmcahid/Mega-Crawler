@@ -1,80 +1,104 @@
 package com.megagastro.poster.service;
 
+import com.megagastro.poster.dto.RemoteCategoryDto;
+import com.megagastro.poster.dto.RemoteProductDto;
 import com.megagastro.poster.model.Product;
 import com.megagastro.poster.model.ProductSource;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Service
 public class RemoteProductService {
 
-    private final RestClient restClient;
+    private final WebClient webClient;
 
-    public RemoteProductService(@Value("${crawler.base-url}") String crawlerBaseUrl) {
-        this.restClient = RestClient.builder()
+    public RemoteProductService(@Value("${crawler.base-url}") String crawlerBaseUrl,
+                                WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder
                 .baseUrl(crawlerBaseUrl)
                 .build();
     }
 
-    public List<Product> fetchRemoteProducts() {
-        RemoteProductDto[] response = restClient.get()
-                .uri("/products")
-                .accept(MediaType.APPLICATION_JSON)
+    /**
+     * Crawler'dan ürünleri çek.
+     * categories null/empty ise tüm kategorileri getirir.
+     * Caffeine ile cache'lenir (CacheConfig'te 5 dk).
+     */
+    @Cacheable(
+            value = "remoteProducts",
+            key = "#categories == null || #categories.trim().isEmpty() ? 'ALL' : #categories.trim()"
+    )
+    public List<Product> fetchRemoteProducts(String categories) {
+        return webClient.get()
+                .uri(uriBuilder -> {
+                    uriBuilder.path("/products");
+                    if (categories != null && !categories.trim().isEmpty()) {
+                        uriBuilder.queryParam("categories", categories.trim());
+                    }
+                    return uriBuilder.build();
+                })
                 .retrieve()
-                .body(RemoteProductDto[].class);
-
-        if (response == null) {
-            return List.of();
-        }
-
-        return Arrays.stream(response)
-                .filter(Objects::nonNull)
+                .bodyToFlux(RemoteProductDto.class)
                 .map(this::mapToProduct)
-                .collect(Collectors.toMap(
-                        Product::getId,
-                        p -> p,
-                        (existing, replacement) -> existing // Duplicate varsa ilkini tut
-                ))
-                .values()
-                .stream()
-                .collect(Collectors.toList());
+                .collectList()
+                .block();
     }
 
+    public List<Product> fetchRemoteProducts() {
+        return fetchRemoteProducts(null);
+    }
+
+    /**
+     * Crawler'dan kategori listesini çeker.
+     * Bu da cache'lidir.
+     */
+    @Cacheable("remoteCategories")
+    public List<RemoteCategoryDto> fetchRemoteCategories() {
+        return webClient.get()
+                .uri("/categories")
+                .retrieve()
+                .bodyToFlux(RemoteCategoryDto.class)
+                .collectList()
+                .block();
+    }
+
+    /**
+     * Remote servis DTO'sunu kendi domain Product modeline çeviren yardımcı fonksiyon.
+     * Burada:
+     * - ID'yi kendimiz üretiyoruz (remote- hash)
+     * - Source'u REMOTE olarak set ediyoruz
+     * - Category ve fiyat alanlarını normalize ediyoruz
+     */
     private Product mapToProduct(RemoteProductDto dto) {
-        Product p = new Product();
-        String url = dto.url != null ? dto.url : "";
-        String name = dto.name != null ? dto.name : "";
-        Double price = dto.price_current != null ? dto.price_current : 0.0;
+        String url = dto.url() != null ? dto.url() : "";
+        String name = dto.name() != null ? dto.name() : "";
 
-        // Daha unique ID oluştur: URL + name + price kombinasyonu
-        String uniqueKey = url + "|" + name + "|" + price;
-        p.setId("remote-" + uniqueKey.hashCode());
+        double current = dto.price_current();
+        double original = dto.price_original() > 0 ? dto.price_original() : current;
+        int discountPct = dto.discount_pct() > 0 ? dto.discount_pct() : 0;
 
-        p.setName(name);
-        p.setUrl(url);
-        p.setImageUrl(dto.image_url);
-        p.setPriceCurrent(price);
-        p.setPriceOriginal(dto.price_original != null ? dto.price_original : p.getPriceCurrent());
-        p.setDiscountPct(dto.discount_pct != null ? dto.discount_pct : 0);
-        p.setSource(ProductSource.REMOTE);
-        p.setCategory(dto.category != null ? dto.category : "Diğer");
-        return p;
-    }
+        String category =
+                dto.category() != null && !dto.category().isBlank()
+                        ? dto.category()
+                        : "Diğer";
 
-    private static class RemoteProductDto {
-        public String name;
-        public String url;
-        public String image_url;
-        public Double price_current;
-        public Double price_original;
-        public Integer discount_pct;
-        public String category;
+        // Unique ID: URL + name + price üzerinden hash
+        String uniqueKey = url + "|" + name + "|" + current;
+        String id = "remote-" + Integer.toUnsignedString(uniqueKey.hashCode());
+        return Product.builder()
+                .id(id)
+                .name(name)
+                .url(url)
+                .imageUrl(dto.image_url())
+                .priceCurrent(current)
+                .priceOriginal(original)
+                .discountPct(discountPct)
+                .source(ProductSource.REMOTE)
+                .category(category)
+                .build();
     }
 }
